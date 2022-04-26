@@ -3,7 +3,8 @@ import numpy as np
 
 model_config = {'ddm': {'name': 'ddm',
                         'params':['v', 'a', 'z', 't'],
-                        'param_bounds': [[-3.0, 0.3, 0.1, 0.0], [3.0, 2.5, 0.9, 2.0]],
+                        ## NOTE: Adapt prior bounds to what was used in the paper.
+                        'param_bounds': [[-2.0, 0.5, 0.3, 0.], [2.0, 2.0, 0.7, 1.8]],
                         'boundary': bf.constant,
                         'n_params': 4,
                         'default_params': [0.0, 1.0, 0.5, 1e-3],

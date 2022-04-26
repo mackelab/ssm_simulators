@@ -1,6 +1,7 @@
 # ssm_simulators
 Python Package which collects simulators for Sequential Sampling Models.
 
+NOTE: This is forked version that was tailored for a comparison to MNLE. It requires a local Julia installation. 
 ### Quick Start
 
 The `ssms` package serves two purposes. 

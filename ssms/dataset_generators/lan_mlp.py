@@ -20,10 +20,13 @@ import psutil
 #import basic_simulators
 from functools import partial
 
+import torch
+
 class data_generator():
     def __init__(self,
                  generator_config = None,
-                 model_config = None
+                 model_config = None,
+                 julia_simulator = None,
                  ):
     
     # INIT -----------------------------------------
@@ -33,6 +36,7 @@ class data_generator():
         else:
             self.generator_config = generator_config 
             self.model_config = model_config
+            self.julia_simulator = julia_simulator
             self._build_simulator()
             self._get_ncpus()
 
@@ -70,9 +74,16 @@ class data_generator():
                                  delta_t = self.generator_config['delta_t'])
                                  
     def get_simulations(self, theta = None):
-        
+
+        # Simulate with LAN-simulator to get metadata.
         out = self.simulator(theta  = theta, 
                              model = self.model_config['name']) # AF-TODO Want to change this so that we accept 
+        # Simulate with Julia simulator and replace data.
+        julia_out = self.julia_simulator(torch.tensor(theta).reshape(1, -1).repeat(self.generator_config['n_samples'], 1))
+        out["rts"] = abs(julia_out).numpy()
+        choices = np.ones_like(out["rts"])
+        choices[julia_out.numpy()< 0] = -1
+        out["choices"] = choices
         return out
 
     def _filter_simulations(self,
@@ -254,11 +265,11 @@ class data_generator():
         # Get Simulations 
             for i in range(self.generator_config['n_subruns']):
                 print('simulation round:', i + 1 , ' of', self.generator_config['n_subruns'])
-                with Pool(processes = self.generator_config['n_cpus'] - 1) as pool:
-
-                    data_tmp[(i * subrun_n * samples_by_param_set):((i + 1) * subrun_n * samples_by_param_set), :] = np.concatenate(pool.map(self._mlp_get_processed_data_for_theta, 
-                                                                                                               [k for k in seed_args[(i * subrun_n):((i + 1) * subrun_n)]]))
-                                                                                                              #[j for j in seeds[(i * subrun_n):((i + 1) * subrun_n)]]))
+                ## NOTE: remove multiprocessing to enable Julia simulator. Use list(map) instead of pool.map.
+                # with Pool(processes = self.generator_config['n_cpus']) as pool:
+                data_tmp[(i * subrun_n * samples_by_param_set):((i + 1) * subrun_n * samples_by_param_set), :] = np.concatenate(list(map(self._mlp_get_processed_data_for_theta, 
+                                                                                                            [k for k in seed_args[(i * subrun_n):((i + 1) * subrun_n)]])))
+                                                                                                            #[j for j in seeds[(i * subrun_n):((i + 1) * subrun_n)]]))
                 
             data_tmp = np.float32(data_tmp)
             
